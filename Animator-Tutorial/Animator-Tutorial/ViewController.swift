@@ -5,14 +5,16 @@
 //  Created by Benjamin Herzog on 30.07.14.
 //  Copyright (c) 2014 Benjamin Herzog. All rights reserved.
 //
+// [GERMAN] Swift Tutorial #12 - iOS- Animation und CoreMotion
+// https://www.youtube.com/watch?v=tC_Kf4Goj9k
 
 import UIKit
 import CoreMotion
 
-var MAX_X: CGFloat = 0
-var MAX_Y: CGFloat = 0
-let BOX_SIZE: CGFloat = 5
-let NUMBER_OF_BOXES = 400
+var MAX_X: CGFloat = 0.0
+var MAX_Y: CGFloat = 0.0
+let BOX_SIZE: CGFloat = 10.0
+let NUMBER_OF_BOXES = 60
 
 class ViewController: UIViewController {
     
@@ -23,7 +25,7 @@ class ViewController: UIViewController {
     let collider = UICollisionBehavior()
     let itemBehavior = UIDynamicItemBehavior()
     
-    let motionQueue = NSOperationQueue()
+    let motionQueue = OperationQueue()
     let motionManager = CMMotionManager()
     
     override func viewDidLoad() {
@@ -33,69 +35,68 @@ class ViewController: UIViewController {
         MAX_Y = view.bounds.size.height - BOX_SIZE
         
         createAnimator()
-        generateBoxes(NUMBER_OF_BOXES)
+        generateBoxes(number: NUMBER_OF_BOXES)
     }
     
     func createAnimator() {
         
         animator = UIDynamicAnimator(referenceView: view)
-        gravity.gravityDirection = CGVectorMake(0, 0.8)
+        gravity.gravityDirection = CGVector(dx: 0, dy: 0.8)
         animator?.addBehavior(gravity)
         
         collider.translatesReferenceBoundsIntoBoundary = true
         animator?.addBehavior(collider)
         
-        itemBehavior.friction = 0.3
-        itemBehavior.elasticity = 0.6
+        itemBehavior.friction = 0.4 	// itemBehavior.friction = 0.3		// Widerstand der einzelnen Boxen
+        itemBehavior.elasticity = 1.1	// itemBehavior.elasticity = 0.6	// Intensität wie die Boxen wieder auseinander springen
         animator?.addBehavior(itemBehavior)
     }
     
-    override func viewDidAppear(animated: Bool) {
+    override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        motionManager.startDeviceMotionUpdatesToQueue(motionQueue, withHandler: {
+        motionManager.startDeviceMotionUpdates(to: motionQueue, withHandler: {
             motion,error in
             
             if error != nil {
-                println("Error: \(error.localizedDescription)")
+                print("Error: \(error!.localizedDescription)")
                 return
             }
-            
-            let grav = motion.gravity
-            
+            guard let grav = motion?.gravity else {
+                return
+            }
             let x = CGFloat(grav.x)
             let y = CGFloat(grav.y)
             var p = CGPoint(x: x, y: y)
             
-            var orientation = UIApplication.sharedApplication().statusBarOrientation
+            let orientation = UIApplication.shared.statusBarOrientation
             
             switch orientation {
-            case .LandscapeLeft:
-                var t = p.x
+            case .landscapeLeft:
+                let t = p.x
                 p.x = 0 - p.y
                 p.y = t
-            case .LandscapeRight:
-                var t = p.x
+            case .landscapeRight:
+                let t = p.x
                 p.x = p.y
                 p.y = 0 - t
-            case .PortraitUpsideDown:
-                p.x *= -1
-                p.x *= -1
+            case .portraitUpsideDown:
+                p.x = p.x * -1
             default: break
             }
             
-            self.gravity.gravityDirection = CGVectorMake(p.x, 0 - p.y)
-            
-            })
+            self.gravity.gravityDirection = CGVector(dx: p.x, dy: 0 - p.y)
+        })
     }
     
-    override func viewDidDisappear(animated: Bool) {
+    override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
+        
         motionManager.stopDeviceMotionUpdates()
     }
     
     func generateBoxes(number: Int) {
-        for i in 0..<number {
+        for _ in 0..<number {
             let newBox = UIView(frame: randomRect())
             newBox.backgroundColor = UIColor.randomColor()
             view.addSubview(newBox)
@@ -109,18 +110,18 @@ class ViewController: UIViewController {
     func randomRect() -> CGRect {
         var ret = CGRect(x: 0, y: 0, width: BOX_SIZE, height: BOX_SIZE)
         
-        do {
-            let x = CGFloat(rand()) % MAX_X
-            let y = CGFloat(rand()) % MAX_Y
-            ret = CGRect(x: x, y: y, width: BOX_SIZE, height: BOX_SIZE)
-        } while(!doesNotCollide(ret))
+        repeat {
+            let x = Int(arc4random()) % Int(MAX_X)
+            let y = Int(arc4random()) % Int(MAX_Y)
+            ret = CGRect(x: CGFloat(x), y: CGFloat(y), width: BOX_SIZE, height: BOX_SIZE)
+        } while(!doesNotCollide(rect: ret))
         
         return ret
     }
     
     func doesNotCollide(rect: CGRect) -> Bool {
         for box in boxes {
-            if(CGRectIntersectsRect(box.frame, rect)) {
+            if(box.frame.intersects(rect)) {
                 return false
             }
         }
@@ -132,13 +133,12 @@ class ViewController: UIViewController {
 extension UIColor {
     
     class func randomColor() -> UIColor {
-        let redValue = Float(rand() % 255) / 255
-        let greenValue = Float(rand() % 255) / 255
-        let blueValue = Float(rand() % 255) / 255
+        let redValue = Float(arc4random() % 255) / 255
+        let greenValue = Float(arc4random() % 255) / 255
+        let blueValue = Float(arc4random() % 255) / 255
         
         return UIColor(red: CGFloat(redValue), green: CGFloat(greenValue), blue: CGFloat(blueValue), alpha: 1)
     }
-    
 }
 
 
